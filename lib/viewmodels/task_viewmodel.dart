@@ -36,21 +36,17 @@ class TaskViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ➕ ADD (REALTIME)
-  Future<void> addTask(String title) async {
-    if (title.trim().isEmpty) return;
-
-    Task? newTask = await _service.addTask(title);
+  // ➕ ADD TASK (🔥 FIX TOTAL)
+  Future<void> addTask(String title, {DateTime? deadline}) async {
+    final newTask = await _service.addTask(title, deadline: deadline);
 
     if (newTask != null) {
-      _tasks.insert(0, newTask); // 🔥 langsung muncul
-      notifyListeners();
-    } else {
-      print("ADD GAGAL ❌");
+      _tasks.add(newTask); // 🔥 INI YANG KAMU BELUM ADA
+      notifyListeners(); // 🔥 BIAR UI UPDATE
     }
   }
 
-  // ✅ TOGGLE (REALTIME)
+  // ✅ TOGGLE TASK (REALTIME TANPA RELOAD)
   Future<void> toggleTask(Task task) async {
     bool oldValue = task.isDone;
 
@@ -62,18 +58,13 @@ class TaskViewModel extends ChangeNotifier {
     if (!success) {
       task.isDone = oldValue; // rollback
       notifyListeners();
+      print("UPDATE GAGAL ❌");
     }
   }
 
-  // 🗑 DELETE (REALTIME)
+  // 🗑 DELETE TASK (REALTIME TANPA RELOAD)
   Future<void> deleteTask(int id) async {
-    Task? removed;
-
-    try {
-      removed = _tasks.firstWhere((e) => e.id == id);
-    } catch (e) {
-      return;
-    }
+    List<Task> oldTasks = List.from(_tasks);
 
     _tasks.removeWhere((e) => e.id == id);
     notifyListeners();
@@ -81,8 +72,11 @@ class TaskViewModel extends ChangeNotifier {
     bool success = await _service.deleteTask(id);
 
     if (!success) {
-      _tasks.add(removed);
+      _tasks = oldTasks; // rollback
       notifyListeners();
+      print("DELETE GAGAL ❌");
+    } else {
+      print("DELETE BERHASIL ✅");
     }
 
     selectedTask = null;

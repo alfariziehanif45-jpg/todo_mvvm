@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/task_model.dart';
 
 class TaskService {
-  final String baseUrl = "http://10.55.174.116/todo_api";
+  final String baseUrl = "http://10.1.8.254/todo_api";
 
   // 🔄 GET DATA
   Future<List<Task>> getTasks() async {
@@ -25,11 +25,15 @@ class TaskService {
   }
 
   // ➕ ADD (🔥 RETURN TASK + ID)
-  Future<Task?> addTask(String title) async {
+  Future<Task?> addTask(String title, {DateTime? deadline}) async {
     try {
       final res = await http.post(
         Uri.parse("$baseUrl/add_task.php"),
-        body: {"title": title},
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "title": title,
+          "deadline": deadline?.toIso8601String(),
+        }),
       );
 
       print("ADD RESPONSE: ${res.body}");
@@ -37,18 +41,22 @@ class TaskService {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
 
+        if (data["status"] == "error") return null;
+
         return Task(
           id: int.parse(data['id'].toString()),
           title: data['title'],
           isDone: data['isDone'] == 1,
+          deadline: data['deadline'] != null
+              ? DateTime.tryParse(data['deadline'])
+              : null,
         );
-      } else {
-        return null;
       }
     } catch (e) {
       print("ERROR ADD: $e");
-      return null;
     }
+
+    return null;
   }
 
   // ✅ UPDATE
