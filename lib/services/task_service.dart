@@ -3,12 +3,16 @@ import 'package:http/http.dart' as http;
 import '../models/task_model.dart';
 
 class TaskService {
-  final String baseUrl = "http://10.1.8.254/todo_api";
+  final String baseUrl = "http://192.168.100.10/todo_api";
+  // 🔥 TAMBAHAN (WAJIB untuk multi user)
+  int? userId;
 
-  // 🔄 GET DATA
+  // 🔄 GET DATA (BERDASARKAN USER)
   Future<List<Task>> getTasks() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl/get_tasks.php"));
+      final res = await http.get(
+        Uri.parse("$baseUrl/get_tasks.php?user_id=$userId"),
+      );
 
       print("GET RESPONSE: ${res.body}");
 
@@ -24,13 +28,14 @@ class TaskService {
     }
   }
 
-  // ➕ ADD (🔥 RETURN TASK + ID)
+  // ➕ ADD TASK (🔥 SUPPORT USER + DEADLINE)
   Future<Task?> addTask(String title, {DateTime? deadline}) async {
     try {
       final res = await http.post(
         Uri.parse("$baseUrl/add_task.php"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
+          "user_id": userId, // 🔥 WAJIB
           "title": title,
           "deadline": deadline?.toIso8601String(),
         }),
@@ -41,12 +46,13 @@ class TaskService {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
 
+        // ❌ kalau error dari PHP
         if (data["status"] == "error") return null;
 
         return Task(
           id: int.parse(data['id'].toString()),
-          title: data['title'],
-          isDone: data['isDone'] == 1,
+          title: data['title'] ?? '',
+          isDone: data['isDone'].toString() == '1',
           deadline: data['deadline'] != null
               ? DateTime.tryParse(data['deadline'])
               : null,
@@ -59,7 +65,7 @@ class TaskService {
     return null;
   }
 
-  // ✅ UPDATE
+  // ✅ UPDATE TASK
   Future<bool> updateTask(Task task) async {
     try {
       final res = await http.post(
@@ -76,7 +82,7 @@ class TaskService {
     }
   }
 
-  // 🗑 DELETE
+  // 🗑 DELETE TASK
   Future<bool> deleteTask(int id) async {
     try {
       final res = await http.post(

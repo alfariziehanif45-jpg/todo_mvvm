@@ -71,7 +71,7 @@ class _TaskCard extends StatelessWidget {
             ],
           ),
           child: ListTile(
-            // ✅ CHECKBOX
+            // ✅ CHECKLIST
             leading: GestureDetector(
               onTap: onToggle,
               child: AnimatedScale(
@@ -125,7 +125,7 @@ class _TaskCard extends StatelessWidget {
               ],
             ),
 
-            // ✅ ACTION BUTTONS
+            // ✅ ACTION (STAR + DELETE)
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -158,7 +158,7 @@ class TaskView extends StatefulWidget {
 class _TaskViewState extends State<TaskView> {
   final TextEditingController _controller = TextEditingController();
 
-  // 🔥 PICK DEADLINE
+  // 🔥 PICK DEADLINE (REAL TIME)
   Future<DateTime?> pickDeadline() async {
     DateTime now = DateTime.now();
 
@@ -186,6 +186,7 @@ class _TaskViewState extends State<TaskView> {
     final vm = Provider.of<TaskViewModel>(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(

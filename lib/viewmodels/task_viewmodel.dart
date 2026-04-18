@@ -11,17 +11,24 @@ class TaskViewModel extends ChangeNotifier {
   Task? selectedTask;
   bool isLoading = false;
 
-  TaskViewModel() {
+  // 🔥 WAJIB: TERIMA userId dari login
+  TaskViewModel(int userId) {
+    _service.userId = userId;
     loadTasks();
   }
 
-  // 🔄 LOAD DATA
+  // 🔄 LOAD DATA (ANTI ERROR)
   Future<void> loadTasks() async {
     isLoading = true;
     notifyListeners();
 
     try {
-      _tasks = await _service.getTasks();
+      final result = await _service.getTasks();
+
+      // 🔥 FIX: biar gak overwrite dengan kosong
+      if (result.isNotEmpty) {
+        _tasks = result;
+      }
     } catch (e) {
       print("ERROR LOAD: $e");
     }
@@ -36,17 +43,22 @@ class TaskViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ➕ ADD TASK (🔥 FIX TOTAL)
+  // ➕ ADD TASK (🔥 SUPER STABLE)
   Future<void> addTask(String title, {DateTime? deadline}) async {
+    if (title.trim().isEmpty) return;
+
     final newTask = await _service.addTask(title, deadline: deadline);
 
     if (newTask != null) {
-      _tasks.add(newTask); // 🔥 INI YANG KAMU BELUM ADA
-      notifyListeners(); // 🔥 BIAR UI UPDATE
+      _tasks.insert(0, newTask); // 🔥 langsung muncul di atas
+      notifyListeners();
+      print("ADD BERHASIL ✅");
+    } else {
+      print("ADD GAGAL ❌");
     }
   }
 
-  // ✅ TOGGLE TASK (REALTIME TANPA RELOAD)
+  // ✅ TOGGLE TASK (REALTIME + ROLLBACK)
   Future<void> toggleTask(Task task) async {
     bool oldValue = task.isDone;
 
@@ -56,13 +68,15 @@ class TaskViewModel extends ChangeNotifier {
     bool success = await _service.updateTask(task);
 
     if (!success) {
-      task.isDone = oldValue; // rollback
+      task.isDone = oldValue; // 🔥 rollback kalau gagal
       notifyListeners();
       print("UPDATE GAGAL ❌");
+    } else {
+      print("UPDATE BERHASIL ✅");
     }
   }
 
-  // 🗑 DELETE TASK (REALTIME TANPA RELOAD)
+  // 🗑 DELETE TASK (REALTIME + ROLLBACK)
   Future<void> deleteTask(int id) async {
     List<Task> oldTasks = List.from(_tasks);
 
@@ -72,7 +86,7 @@ class TaskViewModel extends ChangeNotifier {
     bool success = await _service.deleteTask(id);
 
     if (!success) {
-      _tasks = oldTasks; // rollback
+      _tasks = oldTasks; // 🔥 rollback
       notifyListeners();
       print("DELETE GAGAL ❌");
     } else {
@@ -80,5 +94,10 @@ class TaskViewModel extends ChangeNotifier {
     }
 
     selectedTask = null;
+  }
+
+  // 🔄 OPTIONAL: REFRESH MANUAL
+  Future<void> refresh() async {
+    await loadTasks();
   }
 }
