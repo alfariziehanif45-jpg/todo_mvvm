@@ -3,11 +3,13 @@ import 'package:http/http.dart' as http;
 import '../models/task_model.dart';
 
 class TaskService {
-  final String baseUrl = "http://192.168.100.10/todo_api";
-  // 🔥 TAMBAHAN (WAJIB untuk multi user)
+  final String baseUrl = "http://10.242.113.116/todo_api";
+
   int? userId;
 
-  // 🔄 GET DATA (BERDASARKAN USER)
+  // =========================
+  // 📥 GET TASK
+  // =========================
   Future<List<Task>> getTasks() async {
     try {
       final res = await http.get(
@@ -19,53 +21,90 @@ class TaskService {
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
         return data.map((e) => Task.fromMap(e)).toList();
-      } else {
-        throw Exception("Gagal ambil data");
       }
     } catch (e) {
       print("ERROR GET: $e");
-      return [];
     }
+
+    return [];
   }
 
-  // ➕ ADD TASK (🔥 SUPPORT USER + DEADLINE)
-  Future<Task?> addTask(String title, {DateTime? deadline}) async {
+  // =========================
+  // ➕ ADD TASK (SUPER FIX)
+  // =========================
+  Future<Task?> addTask(
+    String title, {
+    DateTime? deadline,
+    String? category,
+    String? time,
+    bool? isUrgent,
+    bool? isToday,
+    List<String>? days,
+    String? repeatTime,
+    bool? isRecurring,
+  }) async {
     try {
-      final res = await http.post(
+      // 🔥 FIX WAJIB
+      final cleanTitle = title.trim();
+
+      if (cleanTitle.isEmpty) {
+        print("TITLE KOSONG DARI FLUTTER ❌");
+        return null;
+      }
+
+      // 🔥 DEBUG (WAJIB ADA)
+      print("KIRIM DATA:");
+      print("TITLE: $cleanTitle");
+      print("USER ID: $userId");
+
+      final response = await http.post(
         Uri.parse("$baseUrl/add_task.php"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "user_id": userId, // 🔥 WAJIB
-          "title": title,
-          "deadline": deadline?.toIso8601String(),
-        }),
+        body: {
+          "user_id": userId?.toString() ?? "",
+          "title": cleanTitle,
+          "isDone": "0",
+
+          "category": category ?? "",
+          "time": time ?? "",
+          "isUrgent": isUrgent == true ? "1" : "0",
+          "isToday": isToday == true ? "1" : "0",
+
+          "deadline": deadline?.toIso8601String() ?? "",
+
+          // 🔥 FITUR BARU
+          "days": days?.join(',') ?? "",
+          "repeatTime": repeatTime ?? "",
+          "isRecurring": isRecurring == true ? "1" : "0",
+        },
       );
 
-      print("ADD RESPONSE: ${res.body}");
+      print("STATUS CODE: ${response.statusCode}");
+      print("ADD RESPONSE: ${response.body}");
 
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
+      // 🔥 CEK RESPONSE KOSONG / HTML
+      if (response.body.isEmpty || response.body.startsWith("<")) {
+        print("SERVER RETURN HTML / ERROR ❌");
+        return null;
+      }
 
-        // ❌ kalau error dari PHP
-        if (data["status"] == "error") return null;
+      final data = jsonDecode(response.body);
 
-        return Task(
-          id: int.parse(data['id'].toString()),
-          title: data['title'] ?? '',
-          isDone: data['isDone'].toString() == '1',
-          deadline: data['deadline'] != null
-              ? DateTime.tryParse(data['deadline'])
-              : null,
-        );
+      if (data['status'] == 'success') {
+        print("ADD BERHASIL ✅");
+        return Task.fromMap(data['data']);
+      } else {
+        print("SERVER ERROR: ${data['message']}");
       }
     } catch (e) {
-      print("ERROR ADD: $e");
+      print("ERROR ADD TASK: $e");
     }
 
     return null;
   }
 
-  // ✅ UPDATE TASK
+  // =========================
+  // 🔄 UPDATE TASK
+  // =========================
   Future<bool> updateTask(Task task) async {
     try {
       final res = await http.post(
@@ -82,7 +121,9 @@ class TaskService {
     }
   }
 
+  // =========================
   // 🗑 DELETE TASK
+  // =========================
   Future<bool> deleteTask(int id) async {
     try {
       final res = await http.post(

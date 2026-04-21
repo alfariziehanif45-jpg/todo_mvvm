@@ -8,7 +8,12 @@ class Task {
   bool? isUrgent;
   bool? isToday;
 
-  DateTime? deadline; // 🔥 DEADLINE
+  DateTime? deadline;
+
+  // 🔥 FITUR BARU (REPEAT + HARIAN)
+  List<String>? days; // contoh: ["Mon", "Tue"]
+  String? repeatTime; // jam pengulangan
+  bool? isRecurring; // apakah task berulang
 
   Task({
     this.id,
@@ -19,9 +24,14 @@ class Task {
     this.isUrgent,
     this.isToday,
     this.deadline,
+    this.days,
+    this.repeatTime,
+    this.isRecurring,
   });
 
-  // 🔥 FROM API
+  // =========================
+  // 🔄 FROM API
+  // =========================
   factory Task.fromMap(Map<String, dynamic> map) {
     return Task(
       id: int.tryParse(map['id'].toString()),
@@ -35,14 +45,25 @@ class Task {
       isUrgent: map['isUrgent']?.toString() == '1',
       isToday: map['isToday']?.toString() == '1',
 
-      // 🔥 FIX DEADLINE (AMAN)
+      // 🔥 DEADLINE SAFE PARSE
       deadline: (map['deadline'] != null && map['deadline'] != '')
           ? DateTime.tryParse(map['deadline'])
           : null,
+
+      // 🔥 FIX: STRING → LIST
+      days: (map['days'] != null && map['days'] != '')
+          ? (map['days'] as String).split(',')
+          : [],
+
+      repeatTime: map['repeatTime'],
+
+      isRecurring: map['isRecurring']?.toString() == '1',
     );
   }
 
-  // 🔥 TO API
+  // =========================
+  // 📤 TO API
+  // =========================
   Map<String, dynamic> toMap() {
     return {
       "id": id,
@@ -53,16 +74,26 @@ class Task {
       "isUrgent": isUrgent == true ? "1" : "0",
       "isToday": isToday == true ? "1" : "0",
       "deadline": deadline?.toIso8601String(),
+
+      // 🔥 LIST → STRING (WAJIB BIAR MASUK DB)
+      "days": (days != null && days!.isNotEmpty) ? days!.join(',') : "",
+
+      "repeatTime": repeatTime,
+      "isRecurring": isRecurring == true ? "1" : "0",
     };
   }
 
-  // 🔥 CEK TASK TELAT
+  // =========================
+  // ⏰ CEK TELAT
+  // =========================
   bool get isExpired {
     if (deadline == null) return false;
     return DateTime.now().isAfter(deadline!) && !isDone;
   }
 
-  // 🔥 FORMAT DEADLINE (BIAR RAPI DI UI)
+  // =========================
+  // 📅 FORMAT DEADLINE
+  // =========================
   String get deadlineFormatted {
     if (deadline == null) return "-";
 
@@ -73,7 +104,17 @@ class Task {
         "${deadline!.minute.toString().padLeft(2, '0')}";
   }
 
-  // 🔥 CEK SISA WAKTU (OPTIONAL)
+  // =========================
+  // 📆 FORMAT HARI
+  // =========================
+  String get daysFormatted {
+    if (days == null || days!.isEmpty) return "-";
+    return days!.join(', ');
+  }
+
+  // =========================
+  // ⏳ SISA WAKTU
+  // =========================
   Duration? get remainingTime {
     if (deadline == null) return null;
     return deadline!.difference(DateTime.now());

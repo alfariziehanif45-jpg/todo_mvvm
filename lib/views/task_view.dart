@@ -23,6 +23,7 @@ class _TaskCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
+  final VoidCallback onRepeat;
 
   const _TaskCard({
     required this.task,
@@ -30,19 +31,12 @@ class _TaskCard extends StatelessWidget {
     required this.onTap,
     required this.onToggle,
     required this.onDelete,
+    required this.onRepeat,
   });
 
   bool get isOverdue {
     if (task.deadline == null) return false;
     return DateTime.now().isAfter(task.deadline!) && !task.isDone;
-  }
-
-  String formatDeadline(DateTime date) {
-    return "${date.day.toString().padLeft(2, '0')}/"
-        "${date.month.toString().padLeft(2, '0')}/"
-        "${date.year} "
-        "${date.hour.toString().padLeft(2, '0')}:"
-        "${date.minute.toString().padLeft(2, '0')}";
   }
 
   @override
@@ -65,8 +59,8 @@ class _TaskCard extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -74,24 +68,21 @@ class _TaskCard extends StatelessWidget {
             // ✅ CHECKLIST
             leading: GestureDetector(
               onTap: onToggle,
-              child: AnimatedScale(
-                scale: task.isDone ? 1.2 : 1,
+              child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: task.isDone ? AppTheme.accent : Colors.transparent,
-                    border: Border.all(
-                      color: task.isDone ? AppTheme.accent : AppTheme.textMuted,
-                      width: 2,
-                    ),
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: task.isDone ? AppTheme.accent : Colors.transparent,
+                  border: Border.all(
+                    color: task.isDone ? AppTheme.accent : AppTheme.textMuted,
+                    width: 2,
                   ),
-                  child: task.isDone
-                      ? const Icon(Icons.check, size: 14, color: Colors.white)
-                      : null,
                 ),
+                child: task.isDone
+                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                    : null,
               ),
             ),
 
@@ -110,13 +101,12 @@ class _TaskCard extends StatelessWidget {
                     decoration: task.isDone || isOverdue
                         ? TextDecoration.lineThrough
                         : null,
-                    decorationColor: Colors.red,
                   ),
                 ),
 
                 if (task.deadline != null)
                   Text(
-                    "Deadline: ${formatDeadline(task.deadline!)}",
+                    "Deadline: ${task.deadlineFormatted}",
                     style: TextStyle(
                       fontSize: 11,
                       color: isOverdue ? Colors.red : Colors.white54,
@@ -125,12 +115,19 @@ class _TaskCard extends StatelessWidget {
               ],
             ),
 
-            // ✅ ACTION (STAR + DELETE)
+            // ✅ ACTION BUTTONS
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.star_border, color: Colors.white54),
+                // 🔁 REPEAT
+                GestureDetector(
+                  onTap: onRepeat,
+                  child: const Icon(Icons.refresh, color: Colors.greenAccent),
+                ),
+
                 const SizedBox(width: 10),
+
+                // 🗑 DELETE
                 GestureDetector(
                   onTap: onDelete,
                   child: const Icon(
@@ -158,7 +155,7 @@ class TaskView extends StatefulWidget {
 class _TaskViewState extends State<TaskView> {
   final TextEditingController _controller = TextEditingController();
 
-  // 🔥 PICK DEADLINE (REAL TIME)
+  // 📅 PICK DEADLINE
   Future<DateTime?> pickDeadline() async {
     DateTime now = DateTime.now();
 
@@ -206,14 +203,6 @@ class _TaskViewState extends State<TaskView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // HEADER
-                      Text(
-                        "Halo 👋",
-                        style: TextStyle(
-                          color: AppTheme.accentLight,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
                       const Text(
                         "My Tasks",
                         style: TextStyle(
@@ -231,9 +220,6 @@ class _TaskViewState extends State<TaskView> {
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: AppTheme.accent.withOpacity(0.3),
-                          ),
                         ),
                         child: Row(
                           children: [
@@ -252,7 +238,16 @@ class _TaskViewState extends State<TaskView> {
                             ),
                             GestureDetector(
                               onTap: () async {
-                                if (_controller.text.isEmpty) return;
+                                final text = _controller.text.trim();
+
+                                if (text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Judul tidak boleh kosong"),
+                                    ),
+                                  );
+                                  return;
+                                }
 
                                 DateTime? deadline = await pickDeadline();
 
@@ -290,6 +285,7 @@ class _TaskViewState extends State<TaskView> {
                                 itemCount: vm.tasks.length,
                                 itemBuilder: (context, i) {
                                   final task = vm.tasks[i];
+
                                   return _TaskCard(
                                     task: task,
                                     isSelected: vm.selectedTask?.id == task.id,
@@ -300,36 +296,15 @@ class _TaskViewState extends State<TaskView> {
                                         vm.deleteTask(task.id!);
                                       }
                                     },
+                                    onRepeat: () {
+                                      vm.repeatTask(task);
+                                    },
                                   );
                                 },
                               ),
                       ),
                     ],
                   ),
-                ),
-              ),
-
-              // BOTTOM NAV
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      blurRadius: 20,
-                      offset: const Offset(0, -5),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Icon(Icons.home, color: AppTheme.accent),
-                    Icon(Icons.calendar_today, color: Colors.white54),
-                    Icon(Icons.person, color: Colors.white54),
-                    Icon(Icons.settings, color: Colors.white54),
-                  ],
                 ),
               ),
             ],

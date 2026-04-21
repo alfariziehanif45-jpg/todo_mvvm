@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  final String baseUrl = "http://192.168.100.10/todo_api";
+  final String baseUrl = "http://10.242.113.116/todo_api";
+
   // 🔐 LOGIN (return userId)
   Future<int?> login(String username, String password) async {
     try {
