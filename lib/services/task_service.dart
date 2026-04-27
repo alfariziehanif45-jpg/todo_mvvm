@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/task_model.dart';
 
 class TaskService {
-  final String baseUrl = "http://10.242.113.116/todo_api";
+  final String baseUrl = "http://192.168.100.10/todo_api";
 
   int? userId;
 
