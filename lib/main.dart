@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+
+import 'config/api_config.dart';
 import 'views/login_view.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ApiConfig.init();
   runApp(const MyApp());
 }
 

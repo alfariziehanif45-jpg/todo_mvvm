@@ -49,8 +49,22 @@ class TaskViewModel extends ChangeNotifier {
   // =========================
   // ➕ ADD TASK (VERSI LENGKAP)
   // =========================
-  Future<void> addTask(String title, {DateTime? deadline}) async {
-    final newTask = await _service.addTask(title, deadline: deadline);
+  Future<void> addTask(
+    String title, {
+    DateTime? deadline,
+    String? category,
+    bool? isUrgent,
+    bool? isToday,
+    String? time,
+  }) async {
+    final newTask = await _service.addTask(
+      title,
+      deadline: deadline,
+      category: category,
+      isUrgent: isUrgent,
+      isToday: isToday,
+      time: time,
+    );
 
     if (newTask != null) {
       _tasks.insert(0, newTask); // 🔥 TAMBAH LANGSUNG KE LIST

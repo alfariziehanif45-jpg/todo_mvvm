@@ -1,37 +1,37 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
 import '../models/task_model.dart';
 
 class TaskService {
-  final String baseUrl = "http://10.242.113.116/todo_api";
-
   int? userId;
 
-  // =========================
-  // 📥 GET TASK
-  // =========================
   Future<List<Task>> getTasks() async {
     try {
-      final res = await http.get(
-        Uri.parse("$baseUrl/get_tasks.php?user_id=$userId"),
-      );
+      final baseUrl = await ApiConfig.getBaseUrl();
+      final res = await http
+          .get(Uri.parse('$baseUrl/get_tasks.php?user_id=$userId'))
+          .timeout(const Duration(seconds: 15));
 
-      print("GET RESPONSE: ${res.body}");
+      print('GET URL: $baseUrl/get_tasks.php?user_id=$userId');
+      print('GET RESPONSE: ${res.body}');
 
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
         return data.map((e) => Task.fromMap(e)).toList();
       }
     } catch (e) {
-      print("ERROR GET: $e");
+      print('ERROR GET: $e');
+      print(
+        'CEK API_BASE_URL / server PHP / koneksi jaringan / CORS jika jalan di web',
+      );
     }
 
     return [];
   }
 
-  // =========================
-  // ➕ ADD TASK (SUPER FIX)
-  // =========================
   Future<Task?> addTask(
     String title, {
     DateTime? deadline,
@@ -44,98 +44,109 @@ class TaskService {
     bool? isRecurring,
   }) async {
     try {
-      // 🔥 FIX WAJIB
       final cleanTitle = title.trim();
-
       if (cleanTitle.isEmpty) {
-        print("TITLE KOSONG DARI FLUTTER ❌");
+        print('TITLE KOSONG DARI FLUTTER');
         return null;
       }
 
-      // 🔥 DEBUG (WAJIB ADA)
-      print("KIRIM DATA:");
-      print("TITLE: $cleanTitle");
-      print("USER ID: $userId");
+      final baseUrl = await ApiConfig.getBaseUrl();
 
-      final response = await http.post(
-        Uri.parse("$baseUrl/add_task.php"),
-        body: {
-          "user_id": userId?.toString() ?? "",
-          "title": cleanTitle,
-          "isDone": "0",
+      print('KIRIM DATA:');
+      print('TITLE: $cleanTitle');
+      print('USER ID: $userId');
 
-          "category": category ?? "",
-          "time": time ?? "",
-          "isUrgent": isUrgent == true ? "1" : "0",
-          "isToday": isToday == true ? "1" : "0",
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/add_task.php'),
+            body: {
+              'user_id': userId?.toString() ?? '',
+              'title': cleanTitle,
+              'isDone': '0',
+              'category': category ?? '',
+              'time': time ?? '',
+              'isUrgent': isUrgent == true ? '1' : '0',
+              'isToday': isToday == true ? '1' : '0',
+              'deadline': deadline?.toIso8601String() ?? '',
+              'days': days?.join(',') ?? '',
+              'repeatTime': repeatTime ?? '',
+              'isRecurring': isRecurring == true ? '1' : '0',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
 
-          "deadline": deadline?.toIso8601String() ?? "",
+      print('ADD URL: $baseUrl/add_task.php');
+      print('STATUS CODE: ${response.statusCode}');
+      print('ADD RESPONSE: ${response.body}');
 
-          // 🔥 FITUR BARU
-          "days": days?.join(',') ?? "",
-          "repeatTime": repeatTime ?? "",
-          "isRecurring": isRecurring == true ? "1" : "0",
-        },
-      );
-
-      print("STATUS CODE: ${response.statusCode}");
-      print("ADD RESPONSE: ${response.body}");
-
-      // 🔥 CEK RESPONSE KOSONG / HTML
-      if (response.body.isEmpty || response.body.startsWith("<")) {
-        print("SERVER RETURN HTML / ERROR ❌");
+      if (response.body.isEmpty || response.body.startsWith('<')) {
+        print('SERVER RETURN HTML / ERROR');
         return null;
       }
 
       final data = jsonDecode(response.body);
 
       if (data['status'] == 'success') {
-        print("ADD BERHASIL ✅");
+        print('ADD BERHASIL');
         return Task.fromMap(data['data']);
-      } else {
-        print("SERVER ERROR: ${data['message']}");
       }
+
+      print('SERVER ERROR: ${data['message']}');
     } catch (e) {
-      print("ERROR ADD TASK: $e");
+      print('ERROR ADD TASK: $e');
+      print(
+        'CEK API_BASE_URL / server PHP / koneksi jaringan / CORS jika jalan di web',
+      );
     }
 
     return null;
   }
 
-  // =========================
-  // 🔄 UPDATE TASK
-  // =========================
   Future<bool> updateTask(Task task) async {
     try {
-      final res = await http.post(
-        Uri.parse("$baseUrl/update_task.php"),
-        body: {"id": task.id.toString(), "isDone": task.isDone ? "1" : "0"},
-      );
+      final baseUrl = await ApiConfig.getBaseUrl();
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/update_task.php'),
+            body: {
+              'id': task.id.toString(),
+              'isDone': task.isDone ? '1' : '0',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
 
-      print("UPDATE RESPONSE: ${res.body}");
+      print('UPDATE URL: $baseUrl/update_task.php');
+      print('UPDATE RESPONSE: ${res.body}');
 
       return res.statusCode == 200;
     } catch (e) {
-      print("ERROR UPDATE: $e");
+      print('ERROR UPDATE: $e');
+      print(
+        'CEK API_BASE_URL / server PHP / koneksi jaringan / CORS jika jalan di web',
+      );
       return false;
     }
   }
 
-  // =========================
-  // 🗑 DELETE TASK
-  // =========================
   Future<bool> deleteTask(int id) async {
     try {
-      final res = await http.post(
-        Uri.parse("$baseUrl/delete_task.php"),
-        body: {"id": id.toString()},
-      );
+      final baseUrl = await ApiConfig.getBaseUrl();
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/delete_task.php'),
+            body: {'id': id.toString()},
+          )
+          .timeout(const Duration(seconds: 15));
 
-      print("DELETE RESPONSE: ${res.body}");
+      print('DELETE URL: $baseUrl/delete_task.php');
+      print('DELETE RESPONSE: ${res.body}');
 
       return res.statusCode == 200;
     } catch (e) {
-      print("ERROR DELETE: $e");
+      print('ERROR DELETE: $e');
+      print(
+        'CEK API_BASE_URL / server PHP / koneksi jaringan / CORS jika jalan di web',
+      );
       return false;
     }
   }
